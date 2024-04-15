@@ -79,22 +79,49 @@ amount_states = size(sm.x0, 1)
 r0 = mean(data(1,:));
 
 res = zeros(amount_states, amount_data_points);
+
 sm.x0 = [0 0 r0];
 xls = ls(sm, sig(data));
 for i=1:length(data(:,1))
-    %xwls = wls(sm, sig(data(i,:)));
     xls2 = wls(sm, sig(data(i,:)));
-    
-    %xplot2(xls, 'conf', 90);
     sm.x0 = [xls2.x(1:2) sm.x0(3) + 0.5];
     xls.x(i,:) = xls2.x;
 end
 hold on
 xplot2(xls, 'conf', 90);
-
+%% 7.5 b)
+r0 = mean(data(1,:));
+sm.x0 = [0 0 r0];
+%xnls = estimate(sm, sig(data), 'thmask', zeros(sm.nn(4), 1));
+for i=1:length(data(:,1))
+    xnls2 = estimate(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));    
+    sm.x0 = [xnls2.x(1:2) sm.x0(3) + 0.5];
+    plot(xnls, 'conf',90)
+    xnls.x(i,:) = xnls2.x;
+end
+hold on
+plot(xnls, 'conf',90)
+%%
 
 %xplot2(xnls, 'conf', 90);
 %% 7.6
+
+T = 0.5;
+F = [1 0 T 0; 0 1 0 T ; 0 0 1 0; 0 0 0 1];
+G = [ T ^2/2 0; 0 T ^2/2; T 0; 0 T ];
+H = [1 0 0 0; 0 1 0 0];
+%H = eye(3);
+R = 0.03 * eye (2);
+m = lss(F , [], H, [], G*G', R, 1/T) ;
+m.xlabel = { 'X' , 'Y' , ' vX' , ' vY' };
+m.ylabel = { 'X' , 'Y' };
+m.name = 'Constant velocity motion model';
+% z = simulate (m , 20);
+xhat1 = kalman(m, sig(xls.x(:,1:2)), 'alg' , 3, 'k' , 0) ; % Time - varying
+
+%hold on
+xplot2(xls, xhat1, 'conf', 90, [1 2]) ;
+
 
 
 
