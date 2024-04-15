@@ -42,7 +42,9 @@ err_std = std(sel_err, 0, 2);
 
 load("dataset.mat")
 
-sm = exsensor('tdoa1', 4,1)
+%sm = exsensor('tdoa1', 4,1)
+sm = sensormod(@model1, [3 0 4 8])
+
 sm.x0 = [0 0 0]
 %mic_range = 5:8;
 mic_range = 1:4;
@@ -93,14 +95,15 @@ xplot2(xls, 'conf', 90);
 r0 = mean(data(1,:));
 sm.x0 = [0 0 r0];
 %xnls = estimate(sm, sig(data), 'thmask', zeros(sm.nn(4), 1));
+%xnls = sm;
 for i=1:length(data(:,1))
-    xnls2 = estimate(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));    
-    sm.x0 = [xnls2.x(1:2) sm.x0(3) + 0.5];
-    plot(xnls, 'conf',90)
-    xnls.x(i,:) = xnls2.x;
+    [shat, xhat] = nls(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));    
+    %[xhat, shat] = [xnls.x0(1:2)' xnls.x0(3) + 0.5];
+    sm.x0 = [shat.x0(1:2)' shat.x0(3) + 0.5];
+    plot(shat, 'conf',90);
+    
 end
 hold on
-plot(xnls, 'conf',90)
 %%
 
 %xplot2(xnls, 'conf', 90);
@@ -120,8 +123,17 @@ m.name = 'Constant velocity motion model';
 xhat1 = kalman(m, sig(xls.x(:,1:2)), 'alg' , 3, 'k' , 0) ; % Time - varying
 
 %hold on
-xplot2(xls, xhat1, 'conf', 90, [1 2]) ;
+%xplot2(xls, xhat1, 'conf', 90, [1 2]) ;
+xplot2(xls, xhat1, [1 2]) ;
+hold on
 
+% FRågor 1. ska man tuna R själv eller 2. hur fan gör man xnls på ett bra
+% sätt
+% hur ska vi modellera time of arrival i en state space model
+
+%%
+
+%% 7.6 b)
 
 
 
