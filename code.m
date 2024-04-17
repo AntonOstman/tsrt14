@@ -14,16 +14,34 @@ load("calibration_data.mat")
 % we know how long a beep should take to arrive
 % since the car is still, each measure should be 0.5 away from the next
 % using this we can get the error
+tdoa_errors = zeros(12,25)
 errors = zeros(8,24);
 
 for i = 1:size(tphat,2) - 1
     errors(:,i) = tphat(:,i + 1) - tphat(:,i);
 end
+
+tdoa_errors(1,:) = tphat(1,:) - tphat(2,:);
+tdoa_errors(2,:) = tphat(1,:) - tphat(3,:);
+tdoa_errors(3,:) = tphat(1,:) - tphat(4,:);
+tdoa_errors(4,:) = tphat(2,:) - tphat(3,:);
+tdoa_errors(5,:) = tphat(2,:) - tphat(4,:);
+tdoa_errors(6,:) = tphat(3,:) - tphat(4,:);
+
+tdoa_errors(7,:) = tphat (5,:) - tphat(6,:);
+tdoa_errors(8,:) = tphat (5,:) - tphat(7,:);
+tdoa_errors(9,:) = tphat (5,:) - tphat(8,:);
+tdoa_errors(10,:) = tphat(6,:) - tphat(7,:);
+tdoa_errors(11,:) = tphat(6,:) - tphat(8,:);
+tdoa_errors(12,:) = tphat(7,:) - tphat(8,:);
+
 chirp_interval = 0.5;
 errors = errors - chirp_interval;
 sel_err = errors;
 err_mean = mean(sel_err, 2);
 err_std = std(sel_err, 0, 2);
+
+err_tdoa_std = std(tdoa_errors,0,2);
 
 %histfit(sel_err)
 
@@ -44,8 +62,6 @@ load("dataset.mat")
 
 %sm = exsensor('tdoa1', 4,1)
 sm = sensormod(@model1, [3 0 4 8])
-
-sm.x0 = [0 0 0]
 %mic_range = 5:8;
 mic_range = 1:4;
 data = tphat(mic_range,:)' * 340
@@ -75,34 +91,49 @@ crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 %%
 %% 7.5
+
+sm = exsensor('tdoa2',4,1)
+sm.th = th * 0.001
+R = diag(err_tdoa_std(1:6,:));
+sm.pe = ndist(zeros(6,1), R) % maybe kaos
 %xnls = estimate(sm, data, 'thmask', ones(8,1));
-amount_data_points = size(data(:,1), 1)
-amount_states = size(sm.x0, 1)
-r0 = mean(data(1,:));
 
-res = zeros(amount_states, amount_data_points);
+sm.x0 = [0 0];
+data1 = data(:,1) - data(:,2);
+data2 = data(:,1) - data(:,3);
+data3 = data(:,1) - data(:,4);
+data4 = data(:,2) - data(:,3);
+data5 = data(:,2) - data(:,4);
+data6 = data(:,3) - data(:,4);
+data_new = [data1, data2, data3, data4, data5, data6];
 
-sm.x0 = [0 0 r0];
-xls = ls(sm, sig(data));
-for i=1:length(data(:,1))
-    xls2 = wls(sm, sig(data(i,:)));
-    sm.x0 = [xls2.x(1:2) sm.x0(3) + 0.5];
-    xls.x(i,:) = xls2.x;
+for i=1:length(data_new(:,1))
+    [xhat, shat] = wls(sm, sig(data_new(i,:)));
+    plot(shat,'conf',90)
+    sm.x0 = [shat.x0(1:2) ];
+
 end
 hold on
-xplot2(xls, 'conf', 90);
+%xplot2(xls, 'conf', 90);
+
 %% 7.5 b)
+sm = sensormod(@model1, [3 0 4 8])
+sm.th = th * 0.001
+R = diag(err_std(mic_range,:))
+sm.pe = ndist(zeros(4,1), R) % maybe kaos
+hold on
+plot(sm)
+hold on
+crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 r0 = mean(data(1,:));
 sm.x0 = [0 0 r0];
-%xnls = estimate(sm, sig(data), 'thmask', zeros(sm.nn(4), 1));
-%xnls = sm;
 for i=1:length(data(:,1))
-    [shat, xhat] = nls(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));    
-    %[xhat, shat] = [xnls.x0(1:2)' xnls.x0(3) + 0.5];
+    [shat, xhat] = nls(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));
     sm.x0 = [shat.x0(1:2)' shat.x0(3) + 0.5];
-    plot(shat, 'conf',90);
-    
+    plot(shat,'col','r', 'conf',90);
 end
+
 hold on
 %%
 
