@@ -162,19 +162,37 @@ xplot2(xhat1, [1 2],'col','yellow');
 %%
 
 %% 7.6 b)
-TDOA_measurements = data(:, 4) - data(:, 1:3);
+TDOA_measurements = (data(:, 1) - data(:, 2:4));
 sm = sensormod(@model2, [2 0 3 8]);
 
 %R = diag(err_std(mic_range,:)); % 4 har lowest covariance choose that
-R = diag(err_tdoa_std(1:3));
-mm = exmotion('cv2d', 0.5);
+R = diag(err_tdoa_std(2:4));
+mm = exmotion('ca2d', 0.5);
 mms = addsensor(mm, sm);
 mms.pe = ndist(zeros(3,1), R(1:3,1:3)); % maybe kaos
-mms.pv = mms.pv
+mms.pv = mms.pv * 0.1;
 mms.th = th * 0.001;
-mms.x0 = [0, 0, -0.839, -0.2092];
+%mms.p0 = ndist(zeros(3,1), R(1:3,1:3));
 %mms.pe=sm.pe
 xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
-
+hold on
 xplot2(xhat1)
 %%
+TDOA_measurements = (data(:, 1) - data(:, 2:4));
+sm = sensormod(@model2, [2 0 3 8]);
+
+%R = diag(err_std(mic_range,:)); % 4 har lowest covariance choose that
+R = diag(err_tdoa_std(2:4));
+mm = exmotion('ca2d', 0.5);
+mms = addsensor(mm, sm);
+mms.pe = ndist(zeros(3,1), R(1:3,1:3)); % maybe kaos
+mms.pv = mms.pv * 0.1;
+mms.th = th * 0.001;
+%mms.p0 = ndist(zeros(3,1), R(1:3,1:3));
+%mms.pe=sm.pe
+xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
+hold on
+xplot2(xhat1)
+%%
+
+
