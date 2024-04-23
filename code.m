@@ -121,16 +121,18 @@ sm = sensormod(@model1, [3 0 4 8])
 sm.th = th * 0.001
 R = diag(err_std(mic_range,:))
 sm.pe = ndist(zeros(4,1), R) % maybe kaos
-hold on
+hold on 
 plot(sm)
 hold on
 crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 r0 = mean(data(1,:));
 sm.x0 = [0 0 r0];
+data_points = zeros(179,3)
 for i=1:length(data(:,1))
     [shat, xhat] = nls(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));
     sm.x0 = [shat.x0(1:2)' shat.x0(3) + 0.5];
+    data_points(i,:) = xhat.sol;
     plot(shat,'col','r', 'conf',90);
 end
 
@@ -140,22 +142,30 @@ hold on
 %xplot2(xnls, 'conf', 90);
 %% 7.6
 
-T = 0.5;
-F = [1 0 T 0; 0 1 0 T ; 0 0 1 0; 0 0 0 1];
-G = [ T ^2/2 0; 0 T ^2/2; T 0; 0 T ];
-H = [1 0 0 0; 0 1 0 0];
-%H = eye(3);
-R = 0.03 * eye (2);
-m = lss(F , [], H, [], G*G', R, 1/T) ;
-m.xlabel = { 'X' , 'Y' , ' vX' , ' vY' };
-m.ylabel = { 'X' , 'Y' };
-m.name = 'Constant velocity motion model';
-% z = simulate (m , 20);
-xhat1 = kalman(m, sig(xls.x(:,1:2)), 'alg' , 3, 'k' , 0) ; % Time - varying
+%T = 0.5;
+%F = [1 0 T 0; 0 1 0 T ; 0 0 1 0; 0 0 0 1];
+%G = [ T ^2/2 0; 0 T ^2/2; T 0; 0 T ];
+%H = [1 0 0 0; 0 1 0 0];
+
+%R = 0.03 * eye (2);
+%m = lss(F , [], H, [], G*G', R, 1/T) ;
+%m.xlabel = { 'X' , 'Y' , ' vX' , ' vY' };
+%m.ylabel = { 'X' , 'Y' };
+%m.name = 'Constant velocity motion model';
+%z = simulate (m , 20);
+measurement_model = @(t,x,u,th) [x(1,:); x(2,:)];
+sm = sensormod(measurement_model, [2 0 2 0]);
+%@(x(1,:)-th(1)).^2+(x(2,:)-th(2)).^2) + x(3,:);  
+
+m = exmotion('cv2d');
+m = m.addsensor(sm)
+%y = simulate(m,10);
+%xhat1 = kalman(m, sig(data_points(:,1:2))) ; % Time - varying
+xhat1 = ekf(m, data_points(:,1:2)'); % Time - varying
 
 %hold on
 %xplot2(xls, xhat1, 'conf', 90, [1 2]) ;
-xplot2(xls, xhat1, [1 2]) ;
+xplot2(xhat1, [1 2]);
 hold on
 
 % FRågor 1. ska man tuna R själv eller 2. hur fan gör man xnls på ett bra
@@ -165,8 +175,12 @@ hold on
 %%
 
 %% 7.6 b)
-
-
+sm = exsensor('tdoa1',4,1);
+sm.th = th * 0.001;
+R = diag(err_std(mic_range,:));
+sm.pe = ndist(zeros(4,1), R); % maybe kaos
+mm = exmotion('cv2d');
+mms = addsensor(mm,sm);
 
 
 
