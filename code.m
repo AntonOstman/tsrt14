@@ -14,13 +14,12 @@ load("calibration_data.mat")
 % we know how long a beep should take to arrive
 % since the car is still, each measure should be 0.5 away from the next
 % using this we can get the error
-tdoa_errors = zeros(12,25)
+tdoa_errors = zeros(12,25);
 errors = zeros(8,24);
 
 for i = 1:size(tphat,2) - 1
     errors(:,i) = tphat(:,i + 1) - tphat(:,i);
 end
-
 tdoa_errors(1,:) = tphat(1,:) - tphat(2,:);
 tdoa_errors(2,:) = tphat(1,:) - tphat(3,:);
 tdoa_errors(3,:) = tphat(1,:) - tphat(4,:);
@@ -91,30 +90,20 @@ crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 %%
 %% 7.5
-
-sm = exsensor('tdoa2',4,1)
+% sm = exsensor('tdoa2',4,1)
+sm = sensormod(@model2, [2 0 3 8])
 sm.th = th * 0.001
-R = diag(err_tdoa_std(1:6,:));
-sm.pe = ndist(zeros(6,1), R) % maybe kaos
+R = diag(err_tdoa_std(2:4,:));
+sm.pe = ndist(zeros(3,1), R) % maybe kaos
 %xnls = estimate(sm, data, 'thmask', ones(8,1));
 
-sm.x0 = [0 0];
-data1 = data(:,1) - data(:,2);
-data2 = data(:,1) - data(:,3);
-data3 = data(:,1) - data(:,4);
-data4 = data(:,2) - data(:,3);
-data5 = data(:,2) - data(:,4);
-data6 = data(:,3) - data(:,4);
-data_new = [data1, data2, data3, data4, data5, data6];
-
-for i=1:length(data_new(:,1))
-    [xhat, shat] = wls(sm, sig(data_new(i,:)));
+TDOA_measurements = data(:,1) - data(:,2:4);
+for i=1:179
+    [xhat, shat] = wls(sm, sig(TDOA_measurements(i,:)));
+    hold on
     plot(shat,'conf',90)
-    sm.x0 = [shat.x0(1:2) ];
-
+    sm.x0 = [xhat.x];
 end
-hold on
-%xplot2(xls, 'conf', 90);
 
 %% 7.5 b)
 sm = sensormod(@model1, [3 0 4 8])
