@@ -142,46 +142,39 @@ hold on
 %xplot2(xnls, 'conf', 90);
 %% 7.6
 
-%T = 0.5;
-%F = [1 0 T 0; 0 1 0 T ; 0 0 1 0; 0 0 0 1];
-%G = [ T ^2/2 0; 0 T ^2/2; T 0; 0 T ];
-%H = [1 0 0 0; 0 1 0 0];
-
-%R = 0.03 * eye (2);
-%m = lss(F , [], H, [], G*G', R, 1/T) ;
-%m.xlabel = { 'X' , 'Y' , ' vX' , ' vY' };
-%m.ylabel = { 'X' , 'Y' };
-%m.name = 'Constant velocity motion model';
-%z = simulate (m , 20);
-measurement_model = @(t,x,u,th) [x(1,:); x(2,:)];
-sm = sensormod(measurement_model, [2 0 2 0]);
-%@(x(1,:)-th(1)).^2+(x(2,:)-th(2)).^2) + x(3,:);  
+direct_measurement = @(t,x,u,th) [x(1,:); x(2,:)];
+sm = sensormod(direct_measurement, [2 0 2 0]);
 
 m = exmotion('cv2d');
-m = m.addsensor(sm)
-%y = simulate(m,10);
-%xhat1 = kalman(m, sig(data_points(:,1:2))) ; % Time - varying
-xhat1 = ekf(m, data_points(:,1:2)'); % Time - varying
-
-%hold on
-%xplot2(xls, xhat1, 'conf', 90, [1 2]) ;
+m = m.addsensor(sm);
+m.pe=eye(2) * 0.1;
+xhat1 = ekf(m, sig(data_points(:, 1:2))); % Time - varying
 xplot2(xhat1, [1 2]);
 hold on
 
-% FRågor 1. ska man tuna R själv eller 2. hur fan gör man xnls på ett bra
-% sätt
-% hur ska vi modellera time of arrival i en state space model
+sm = sensormod(direct_measurement, [2 0 2 0]);
+m = exmotion('ca2d');
+m = m.addsensor(sm);
+m.pe=eye(2) * 0.1;
+xhat1 = ekf(m, sig(data_points(:, 1:2))); % Time - varying
+xplot2(xhat1, [1 2],'col','yellow');
 
 %%
 
 %% 7.6 b)
-sm = exsensor('tdoa1',4,1);
-sm.th = th * 0.001;
-R = diag(err_std(mic_range,:));
-sm.pe = ndist(zeros(4,1), R); % maybe kaos
-mm = exmotion('cv2d');
-mms = addsensor(mm,sm);
+TDOA_measurements = data(:, 4) - data(:, 1:3);
+sm = sensormod(@model2, [2 0 3 8]);
 
+%R = diag(err_std(mic_range,:)); % 4 har lowest covariance choose that
+R = diag(err_tdoa_std(1:3));
+mm = exmotion('cv2d', 0.5);
+mms = addsensor(mm, sm);
+mms.pe = ndist(zeros(3,1), R(1:3,1:3)); % maybe kaos
+mms.pv = mms.pv
+mms.th = th * 0.001;
+mms.x0 = [0, 0, -0.839, -0.2092];
+%mms.pe=sm.pe
+xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
 
-
+xplot2(xhat1)
 %%
