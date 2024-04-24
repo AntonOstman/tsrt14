@@ -44,8 +44,8 @@ err_tdoa_std = std(tdoa_errors,0,2);
 figure()
 for i=1:8
     subplot(3,3,i)
-    histfit(sel_err(i,:))
-    nr_sensor = sprintf('sensor %d', i)
+    histfit(sel_err(i,:));
+    nr_sensor = sprintf('sensor %d', i);
     title(nr_sensor)
 end
 %%
@@ -97,15 +97,26 @@ R2 = diag(err_std(mic_range2,:));
 
 sm.pe = ndist(zeros(4,1), R); % maybe kaos
 sm2.pe = ndist(zeros(4,1), R2); % maybe kaos
-figure()
-hold on
+
+%%
+figure(13)
+subplot(2,2,1)
 plot(sm)
-%hold on
-%plot(sm2,'col','red')
-%hold on
-crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-hold on
+title('Config 1')
+subplot(2,2,2)
+plot(sm2)
+title('Config 2')
+subplot(2,2,3)
+
+crlb(sm) 
+title('Config 1 CRLB')
+xlim([-0.2 0.2])
+ylim([-0.2 0.2])
+subplot(2,2,4)
 crlb(sm2)
+title('Config 2 CRLB')
+xlim([-0.2 0.2])
+ylim([-0.2 0.2])
 % We see that config 1 is better since the crlb is better and rounder
 
 %%
@@ -127,7 +138,7 @@ for i=1:179
     plot(shat,'conf',90)
     sm.x0 = [xhat.x];
 end
-title('TDOA as range differences')
+title('TDOA with pairwise difference')
 
 
 %% 7.5 b)
@@ -147,7 +158,7 @@ for i=1:length(data(:,1))
     data_points(i,:) = xhat.sol;
     plot(shat, 'conf', 90);
 end
-title('TDOA with bias state measurements nls solver')
+title('TDOA with bias state')
 hold on
 %%
 
@@ -205,16 +216,34 @@ mms = addsensor(mm, sm);
 mms.pe = ndist(zeros(3,1), R(1:3,1:3)); % maybe kaos
 mms.pv = mms.pv * 0.1;
 mms.th = th * 0.001;
-%mms.p0 = ndist(zeros(3,1), R(1:3,1:3));
-%mms.pe=sm.pe
 xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
 subplot(2,2,4)
 xplot2(xhat1)
 title('EKF constant acceleration')
 
 %% 7.7 
+figure(99)
+err = 1;
+sens_mean = 100;
+sens_std = 500;
+th_bad = th + sens_mean + sens_std.*randn(8,1)';
 
+TDOA_measurements = (data(:, 1) - data(:, 2:4));
+sm = sensormod(@model2, [2 0 3 8]);
 
+%R = diag(err_std(mic_range,:)); % 4 har lowest covariance choose that
+R = diag(err_tdoa_std(2:4));
+mm = exmotion('cv2d', 0.5);
+mms = addsensor(mm, sm);
+mms.pe = ndist(zeros(3,1), R(1:3,1:3)); % maybe kaos
+mms.pv = mms.pv * 0.1;
+mms.th = th_bad * 0.001;
+xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
+clf("reset")
+xplot2(xhat1)
+hold on
+plot(position(:,2),position(:,3))
+title('EKF constant acceleration')
 
-th 
+ 
 
