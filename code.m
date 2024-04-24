@@ -41,9 +41,13 @@ err_mean = mean(sel_err, 2);
 err_std = std(sel_err, 0, 2);
 
 err_tdoa_std = std(tdoa_errors,0,2);
-
-%histfit(sel_err)
-
+figure()
+for i=1:8
+    subplot(3,3,i)
+    histfit(sel_err(i,:))
+    nr_sensor = sprintf('sensor %d', i)
+    title(nr_sensor)
+end
 %%
 
 %% Task 7.2
@@ -59,11 +63,13 @@ err_tdoa_std = std(tdoa_errors,0,2);
 
 load("dataset.mat")
 
-%sm = exsensor('tdoa1', 4,1)
 sm = sensormod(@model1, [3 0 4 8])
-%mic_range = 5:8;
+mic_range2 = 5:8;
 mic_range = 1:4;
 data = tphat(mic_range,:)' * 340
+
+sm2 = sensormod(@model1, [3 0 4 8])
+
 
 th = [
 2056.2 246.1;   % 1
@@ -76,20 +82,35 @@ th = [
 -2179.2 2157.2  % 8 
 ]
 
-th = th(mic_range,:)
-th = reshape(th.',1,[])
+th2 = th(mic_range2,:);
+th2 = reshape(th2.',1,[]);
+th = th(mic_range,:);
+th = reshape(th.',1,[]);
 
-sm.th = th * 0.001
-R = diag(err_std(mic_range,:))
-sm.pe = ndist(zeros(4,1), R) % maybe kaos
+sm.th = th * 0.001;
+sm.x0 = [0 0 0];
+sm2.th = th2 * 0.001;
+sm2.x0 = [0 0 0];
+
+R = diag(err_std(mic_range,:));
+R2 = diag(err_std(mic_range2,:));
+
+sm.pe = ndist(zeros(4,1), R); % maybe kaos
+sm2.pe = ndist(zeros(4,1), R2); % maybe kaos
+figure()
 hold on
 plot(sm)
-hold on
+%hold on
+%plot(sm2,'col','red')
+%hold on
 crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+hold on
+crlb(sm2)
 % We see that config 1 is better since the crlb is better and rounder
 
 %%
 %% 7.5
+figure()
 % sm = exsensor('tdoa2',4,1)
 sm = sensormod(@model2, [2 0 3 8])
 sm.th = th * 0.001
@@ -98,39 +119,41 @@ sm.pe = ndist(zeros(3,1), R) % maybe kaos
 %xnls = estimate(sm, data, 'thmask', ones(8,1));
 
 TDOA_measurements = data(:,1) - data(:,2:4);
+subplot(2,1,1)
+
 for i=1:179
     [xhat, shat] = wls(sm, sig(TDOA_measurements(i,:)));
     hold on
     plot(shat,'conf',90)
     sm.x0 = [xhat.x];
 end
+title('TDOA as range differences')
+
 
 %% 7.5 b)
-sm = sensormod(@model1, [3 0 4 8])
-sm.th = th * 0.001
-R = diag(err_std(mic_range,:))
-sm.pe = ndist(zeros(4,1), R) % maybe kaos
-hold on 
-plot(sm)
-hold on
-crlb(sm) % !!!!!!!!!!!!!!!!!!! använd crlb2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+sm = sensormod(@model1, [3 0 4 8]);
+sm.th = th * 0.001;
+R = diag(err_std(mic_range,:));
+sm.pe = ndist(zeros(4,1), R); % maybe kaos
 
 r0 = mean(data(1,:));
 sm.x0 = [0 0 r0];
-data_points = zeros(179,3)
+data_points = zeros(179,3);
+subplot(2,1,2)
+
 for i=1:length(data(:,1))
     [shat, xhat] = nls(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));
     sm.x0 = [shat.x0(1:2)' shat.x0(3) + 0.5];
     data_points(i,:) = xhat.sol;
-    plot(shat,'col','r', 'conf',90);
+    plot(shat, 'conf', 90);
 end
-
+title('TDOA with bias state measurements nls solver')
 hold on
 %%
 
 %xplot2(xnls, 'conf', 90);
 %% 7.6
-
+figure()
 direct_measurement = @(t,x,u,th) [x(1,:); x(2,:)];
 sm = sensormod(direct_measurement, [2 0 2 0]);
 
@@ -138,15 +161,18 @@ m = exmotion('cv2d');
 m = m.addsensor(sm);
 m.pe=eye(2) * 0.1;
 xhat1 = ekf(m, sig(data_points(:, 1:2))); % Time - varying
+subplot(2,2,1)
 xplot2(xhat1, [1 2]);
-hold on
+title('EKF artificial measurements CV')
 
 sm = sensormod(direct_measurement, [2 0 2 0]);
 m = exmotion('ca2d');
 m = m.addsensor(sm);
 m.pe=eye(2) * 0.1;
 xhat1 = ekf(m, sig(data_points(:, 1:2))); % Time - varying
-xplot2(xhat1, [1 2],'col','yellow');
+subplot(2,2,2)
+xplot2(xhat1, [1 2]);
+title('EKF artificial measurements CA')
 
 %%
 
@@ -156,7 +182,7 @@ sm = sensormod(@model2, [2 0 3 8]);
 
 %R = diag(err_std(mic_range,:)); % 4 har lowest covariance choose that
 R = diag(err_tdoa_std(2:4));
-mm = exmotion('ca2d', 0.5);
+mm = exmotion('cv2d', 0.5);
 mms = addsensor(mm, sm);
 mms.pe = ndist(zeros(3,1), R(1:3,1:3)); % maybe kaos
 mms.pv = mms.pv * 0.1;
@@ -164,8 +190,10 @@ mms.th = th * 0.001;
 %mms.p0 = ndist(zeros(3,1), R(1:3,1:3));
 %mms.pe=sm.pe
 xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
-hold on
+subplot(2,2,3)
 xplot2(xhat1)
+title('EKF constant velocity')
+
 %%
 TDOA_measurements = (data(:, 1) - data(:, 2:4));
 sm = sensormod(@model2, [2 0 3 8]);
@@ -180,8 +208,13 @@ mms.th = th * 0.001;
 %mms.p0 = ndist(zeros(3,1), R(1:3,1:3));
 %mms.pe=sm.pe
 xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
-hold on
+subplot(2,2,4)
 xplot2(xhat1)
-%%
+title('EKF constant acceleration')
 
+%% 7.7 
+
+
+
+th 
 
