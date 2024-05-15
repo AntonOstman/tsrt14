@@ -140,12 +140,12 @@ function [xhat, meas] = ekfFilter(fname, calAcc, calGyr, calMag)
     mag = data(1, 8:10)';
     if ~any(isnan(mag))  % Mag measurements are available.
       % Do something
-      %if abs(norm(calMag.m,2) - norm(mag,2)) < 20
+      if abs(norm(calMag.m,2) - norm(mag,2)) < 20
            [x, P] = mu_m(x, P, mag, 10 * calMag.R, [0 sqrt(calMag.m(1)^2 + calMag.m(2)^2) calMag.m(3)]');
-      %    setMagDist(ownView,0)
-      %else
+          setMagDist(ownView,0)
+      else
           setMagDist(ownView,1)
-      %end
+      end
     end
 
     orientation = data(1, 18:21)';  % Google's orientation estimate.
