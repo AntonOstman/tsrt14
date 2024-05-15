@@ -103,68 +103,9 @@ calGyr.m = mean(meas.gyr(:, ~any(isnan(meas.gyr), 1)), 2);
 calMag.m = mean(meas.mag(:, ~any(isnan(meas.mag), 1)), 2);
 calAcc.m = mean(meas.acc(:, ~any(isnan(meas.acc), 1)), 2);
 
-calGyr.R = diag(std(meas.acc(:, ~any(isnan(meas.acc), 1)),0, 2));
-calMag.R = diag(std(meas.mag(:, ~any(isnan(meas.mag), 1)),0, 2));
-calAcc.R = diag(std(meas.gyr(:, ~any(isnan(meas.gyr), 1)),0, 2));
-
-
-
-%{
-AVERAGES
-mean(meas.acc(:, ~any(isnan(meas.acc), 1)), 2)
-ans =
-    0.0085
-    0.1544
-    9.8807
-mean(meas.gyr(:, ~any(isnan(meas.gyr), 1)), 2)
-ans =
-   1.0e-03 *
-
-   -0.5136
-   -0.0326
-    0.4701
-
-mean(meas.mag(:, ~any(isnan(meas.mag), 1)), 2)
-ans =
-  -37.6784
-  -21.6402
-  -39.9535
-
-STANDARD DEVIATIONS
-
-std(meas.acc(:, ~any(isnan(meas.acc), 1)),0, 2)
-
-ans =
-
-    0.0217
-    0.0332
-    0.0144
-
-std(meas.mag(:, ~any(isnan(meas.mag), 1)),0, 2)
-
-ans =
-
-    0.5320
-    0.4313
-    0.3144
-
-std(meas.gyr(:, ~any(isnan(meas.gyr), 1)),0, 2)
-
-ans =
-
-    0.0009
-    0.0015
-    0.0010
-%}
-
-
-
-
-
-
-
-
-
+calGyr.R = cov(meas.gyr(:,~any(isnan(meas.gyr),1))');
+calMag.R = cov(meas.mag(:,~any(isnan(meas.mag),1))');
+calAcc.R = cov(meas.acc(:,~any(isnan(meas.acc),1))');
 
 %%
 % *Result*
