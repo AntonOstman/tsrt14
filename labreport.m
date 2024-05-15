@@ -231,22 +231,31 @@ figure
 visDiff(xhat4, meas4);
 %%
 % _*Shortly describe your observations:*_
-%
+%   
 % * _What has the accelerometer added?_
+% It has added some sort of absolute positioning, the phone knows what down
+% is
 % * _What happens when you shake or quickly slide the phone on a surface?
 %   Why?_
+% it belevies it is flipping in may directions, likely because magnitude of 
+% the axis on the accelerometer are quickly turning
 %
 
 %% 5. Add accelerometer outlier rejection
 % _*Describe your accelerometer outlier rejection:*_
-%
+% we check if the norm is within 8.5 to 9.5
 % * _What is considered an outlier?_
 % * _What do you do when you encounter an outlier?_
-%
+% When hard forces are turning the phone
 %%
 % _*How did you implement the outlier rejection?*_
 %%
-%
+%        if (norm(acc,2) < 10.5 && norm(acc,2) > 8.5)
+%            [x, P] = tu_qw(x, P, gyr - calGyr.m, T, calGyr.R);
+%            setAccDist(ownView, 0)
+%        else
+%            setAccDist(ownView, 1)
+%        end
 %   % _Write code to clarify here._
 %
 %%
@@ -265,7 +274,8 @@ visDiff(xhat5, meas5);
 %
 % * _What happens when you shake or quickly slide the phone on surface?
 %   Why?_
-
+% It is way less violently shaking than before, the magnitude is not
+% allowed to accumulate as much
 %% 6. Add the EKF magnetometer measurement update step
 % _*Include your magnetometer measurement update function* from the
 % preparations here:_
@@ -291,9 +301,13 @@ visDiff(xhat6, meas6);
 % _*Shortly describe your observations:*_
 %
 % * _What has the magnetometer added?_
+% It has added a compas like effect, so the phone should know when it is
+% oriented east west etc,
 % * _What happens when you put the phone close to a magnet?  (Use a
 %   refridgerator magnet, or hold the phone close to, eg, the keyboard
 %   which is usually magnetic.)  Why?_
+% it uses this to orient itself since the magnet is stronger than magnetic
+% field or world
 
 %% 7. Add magnetometer outlier rejection
 % _*Describe your magnetometer outlier rejection:*_
@@ -303,6 +317,8 @@ visDiff(xhat6, meas6);
 %
 %%
 % _*How did you implement the outlier rejection?*_
+% if the absolute value is less than 25 and more than 65 
+% values taken from google earch magnetic field strength
 %%
 %
 %   % _Write code to clarify here._
@@ -324,6 +340,8 @@ visDiff(xhat7, meas7);
 % _*Shortly describe your observations:*_
 %
 % * _What happens when you put the phone close to a magnet?  Why?_
+% The measurements starts to get rejected since the magnitud difference
+% from calibarion is to large
 
 %% 8. Test your filter without gyroscope measurements
 % _The easiest way to do this is to run your full filter implementation and
@@ -337,15 +355,19 @@ if ~inpublish  % Don't recollect data during publish
   [xhat8, meas8] = ekfFilter();
   save DATAFILE -append xhat8 meas8
 end
+%%
 figure
 visDiff(xhat8, meas8);
 %%
 % _*Shortly describe your observations:*_
 %
 % * _How does the behavor differ when using and not the gyroscope?_
+%  It still works but is less precise when it comes to quick turns
 % * _Some phones has no gyroscope, to reduce the production cost and
 %   preserve battery.  How does that affect their ability to estimate
 %   orientation?_
+% Makes it worse, and if there are disturbences it could become hard, but
+% will likely mostly still work
 
 %% 9. If you are interested and have time
 % _No need to report back if you did this, but feel free if you did._

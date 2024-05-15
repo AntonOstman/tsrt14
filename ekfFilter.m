@@ -121,19 +121,31 @@ function [xhat, meas] = ekfFilter(fname, calAcc, calGyr, calMag)
     T = t - t_prev;
     gyr = data(1, 5:7)';
     if ~any(isnan(gyr))  % Gyro measurements are available.
-      [x, P] = tu_qw(x, P, gyr - calGyr.m, T, calGyr.R);
-      
-      end
+        [x, P] = tu_qw(x, P, gyr, T, 2000 * calGyr.R);
+    else
+        [x, P] = tu_qw_no(x, P, T, 2000 * calGyr.R);
+    end
 
     acc = data(1, 2:4)';
     if ~any(isnan(acc))  % Acc measurements are available.
       % Do something
-
+        if (norm(acc,2) < 12 && norm(acc,2) > 7.5)
+            [x, P] = mu_g(x, P, acc, 10 * calAcc.R, [0,0,9.82]');
+            setAccDist(ownView, 0)
+        else
+            setAccDist(ownView, 1)
+        end
     end
 
     mag = data(1, 8:10)';
     if ~any(isnan(mag))  % Mag measurements are available.
       % Do something
+      if abs(norm(calMag.m,2) - norm(mag,2)) < 20
+          %[x, P] = mu_m(x, P, mag, 10 * calMag.R, [0 sqrt(calMag.m(1)^2 + calMag.m(2)^2) calMag.m(3)]');
+          setMagDist(ownView,0)
+      else
+          setMagDist(ownView,1)
+      end
     end
 
     orientation = data(1, 18:21)';  % Google's orientation estimate.

@@ -51,14 +51,16 @@ hist(meas.mag(2,:))
 subplot(3,3,9)
 hist(meas.mag(3,:))
 
+gyro_cov = cov(meas.gyr(:,~any(isnan(meas.gyr),1))')
+
+
 calGyr.m = mean(meas.gyr(:, ~any(isnan(meas.gyr), 1)), 2);
 calMag.m = mean(meas.mag(:, ~any(isnan(meas.mag), 1)), 2);
 calAcc.m = mean(meas.acc(:, ~any(isnan(meas.acc), 1)), 2);
 
-calGyr.R = diag(std(meas.acc(:, ~any(isnan(meas.acc), 1)),0, 2));
-calMag.R = diag(std(meas.mag(:, ~any(isnan(meas.mag), 1)),0, 2));
-calAcc.R = diag(std(meas.gyr(:, ~any(isnan(meas.gyr), 1)),0, 2));
-
+calGyr.R = cov(meas.gyr(:,~any(isnan(meas.gyr),1))');
+calMag.R = cov(meas.mag(:,~any(isnan(meas.mag),1))');
+calAcc.R = cov(meas.acc(:,~any(isnan(meas.acc),1))');
 
 
 %{
