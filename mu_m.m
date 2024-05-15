@@ -10,5 +10,7 @@ eps = ymag - Qq(x)*m0;
 
 x = x + K * eps;
 P = P - P*h_dx'*inv(S)*h_dx*P;
+x = qnorm(x);
+
 
 end

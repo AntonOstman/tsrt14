@@ -5,10 +5,11 @@ h_dx = dQqdq(x)*g0;
 S = Ra + h_dx*P*h_dx';
 K = P*h_dx*inv(S);
 
-eps = yacc - Qq(x)*m0;
+eps = yacc - Qq(x)*g0;
 
 x = x + K * eps;
 P = P - P*h_dx'*inv(S)*h_dx*P;
+x = qnorm(x);
 
 
 

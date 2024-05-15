@@ -1,4 +1,4 @@
-function [xhat, meas] = filterTemplate(fname, calAcc, calGyr, calMag)
+function [xhat, meas] = ekfFilter(fname, calAcc, calGyr, calMag)
 % FILTERTEMPLATE  Filter template
 %
 % This is a template function for how to collect and filter data
@@ -40,8 +40,12 @@ function [xhat, meas] = filterTemplate(fname, calAcc, calGyr, calMag)
 %               timestamp (4 x T)
 %
 % Measurements not available are marked with NaNs.
+
   %% Setup necessary infrastructure
   import('se.hendeby.sensordata.*');  % Used to receive data.
+    load calAcc.mat
+    load calGyr.mat
+    load calMag.mat
 
   DISPLAY_FREQ = 10; % [Hz]  Frequency of update of the visualization
 
@@ -104,22 +108,27 @@ function [xhat, meas] = filterTemplate(fname, calAcc, calGyr, calMag)
     data = server.getNext(5);
 
     if isnan(data(1))  % No new data received
+      %[x, P] = tu_qw_no(x, P,T, calGyr.R);
       continue;
     end
     t = data(1)/1000;  % Extract current time
 
     if isempty(t0)  % Initialize t0
       t0 = t;
+      t_prev = t;
     end
 
+    T = t - t_prev;
     gyr = data(1, 5:7)';
     if ~any(isnan(gyr))  % Gyro measurements are available.
-      % Do something
-    end
+      [x, P] = tu_qw(x, P, gyr - calGyr.m, T, calGyr.R);
+      
+      end
 
     acc = data(1, 2:4)';
     if ~any(isnan(acc))  % Acc measurements are available.
       % Do something
+
     end
 
     mag = data(1, 8:10)';
@@ -149,8 +158,8 @@ function [xhat, meas] = filterTemplate(fname, calAcc, calGyr, calMag)
     xhat.x(:, end+1) = x;
     xhat.P(:, :, end+1) = P;
     xhat.t(end+1) = t - t0;
-
     meas.t(end+1) = t - t0;
+    t_prev = t;
     meas.acc(:, end+1) = acc;
     meas.gyr(:, end+1) = gyr;
     meas.mag(:, end+1) = mag;
