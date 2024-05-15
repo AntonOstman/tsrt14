@@ -186,7 +186,7 @@ ans =
 %
 %%
 % _*Motivate parameter choices:*_
-%
+% Gyro is very reactive so it gets a very high scaling
 %%
 % *Result*
 %
@@ -217,7 +217,7 @@ visDiff(xhat3, meas3);
 %
 %%
 % _*Motivate parameter choices:*_
-%
+% Acceleromter is usally good so it does not have too high of scaling
 %%
 % *Result*
 %
@@ -271,7 +271,7 @@ figure
 visDiff(xhat5, meas5);
 %%
 % _*Shortly describe your observations:*_
-%
+% It is better at finding the facing direction
 % * _What happens when you shake or quickly slide the phone on surface?
 %   Why?_
 % It is way less violently shaking than before, the magnitude is not
@@ -284,7 +284,7 @@ visDiff(xhat5, meas5);
 %
 %%
 % _*Motivate parameter choices:*_
-%
+% Same as accelerometer
 %
 %%
 % *Result*
@@ -317,8 +317,7 @@ visDiff(xhat6, meas6);
 %
 %%
 % _*How did you implement the outlier rejection?*_
-% if the absolute value is less than 25 and more than 65 
-% values taken from google earch magnetic field strength
+% if the absolute value from calibration is more than 20mT
 %%
 %
 %   % _Write code to clarify here._
@@ -366,8 +365,9 @@ visDiff(xhat8, meas8);
 % * _Some phones has no gyroscope, to reduce the production cost and
 %   preserve battery.  How does that affect their ability to estimate
 %   orientation?_
-% Makes it worse, and if there are disturbences it could become hard, but
-% will likely mostly still work
+% Makes it worse, and if there are disturbences to magnetometer it could 
+% become h to hard, but will likely mostly still work okay
+% Quick movements will be difficult
 
 %% 9. If you are interested and have time
 % _No need to report back if you did this, but feel free if you did._
