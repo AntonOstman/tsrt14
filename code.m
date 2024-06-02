@@ -10,33 +10,17 @@ plot(gt(:,2),gt(:,3))
 %%
 %% Task 7.1 Calculate the normal distribution parameters
 load("calibration_data.mat")
-tdoa_errors = zeros(12,25);
 errors = zeros(8,24);
 
 for i = 1:size(tphat,2) - 1
     errors(:,i) = tphat(:,i + 1) - tphat(:,i);
 end
-tdoa_errors(1,:) = tphat(1,:) - tphat(2,:);
-tdoa_errors(2,:) = tphat(1,:) - tphat(3,:);
-tdoa_errors(3,:) = tphat(1,:) - tphat(4,:);
-tdoa_errors(4,:) = tphat(2,:) - tphat(3,:);
-tdoa_errors(5,:) = tphat(2,:) - tphat(4,:);
-tdoa_errors(6,:) = tphat(3,:) - tphat(4,:);
-
-tdoa_errors(7,:) = tphat (5,:) - tphat(6,:);
-tdoa_errors(8,:) = tphat (5,:) - tphat(7,:);
-tdoa_errors(9,:) = tphat (5,:) - tphat(8,:);
-tdoa_errors(10,:) = tphat(6,:) - tphat(7,:);
-tdoa_errors(11,:) = tphat(6,:) - tphat(8,:);
-tdoa_errors(12,:) = tphat(7,:) - tphat(8,:);
 
 chirp_interval = 0.5;
 errors = errors - chirp_interval;
 sel_err = errors;
-err_mean = mean(sel_err, 2);
 err_std = std(sel_err, 0, 2);
 
-err_tdoa_std = std(tdoa_errors,0,2);
 figure()
 for i=1:8
     subplot(3,3,i)
@@ -62,7 +46,12 @@ load("dataset.mat")
 sm = sensormod(@model1, [3 0 4 8])
 mic_range2 = 5:8;
 mic_range = 1:4;
-data = tphat(mic_range,:)' * 343
+data = tphat(mic_range,:)'
+bias = mean(sel_err, 2);
+bias = bias(mic_range)
+for i=1:size(bias,1)
+    data(:,i) = (data(:,i) - bias(i)) * 343
+end
 
 sm2 = sensormod(@model1, [3 0 4 8])
 
@@ -124,20 +113,25 @@ figure()
 sm = sensormod(@model2, [2 0 3 8]);
 sm.th = th * 0.001;
 sm.x0 = [0 0];
-R1 = eye(3) * err_std(1); 
+R1 = err_std(1); 
 R = diag(err_std(2:4));
-sm.pe = ndist(zeros(3,1), R1 - R); % maybe kaos
+sm.pe = ndist(zeros(3,1), R1 + R); % maybe kaos
 
-TDOA_measurements = data(:,1) - data(:,2:4);
+TDOA_measurements = (data(:,1)) - (data(:,2:4));
 subplot(2,1,1)
+data_points = zeros(179,2);
+
+shat = sm
 
 for i=1:179
     %[xhat, shat] = wls(sm, sig(TDOA_measurements(i,:)));
-    [shat, xhat] = nls(sm, sig(TDOA_measurements(i,:)), 'thmask', zeros(sm.nn(4), 1));
+    [shat, xhat] = nls(shat, sig(TDOA_measurements(i,:)), 'thmask', zeros(sm.nn(4), 1));
     hold on
-    plot(shat,'conf',90)
-    sm.x0 = [xhat.sol];
+    data_points(i,:) = xhat.sol;
+    shat.x0 = [xhat.sol];
 end
+plot(data_points(:,1),data_points(:,2))
+
 hold on
 plot(gt(:,2),gt(:,3))
 title('TDOA with pairwise difference')
@@ -146,7 +140,8 @@ title('TDOA with pairwise difference')
 %% 7.5 b)
 sm = sensormod(@model1, [3 0 4 8]);
 sm.th = th * 0.001;
-R = diag(err_std(mic_range,:));
+%R = diag(err_std(mic_range,:));
+R = eye(4); % Set to eye for nls
 sm.pe = ndist(zeros(4,1), R);
 
 r0 = mean(data(1,:));
@@ -154,40 +149,52 @@ sm.x0 = [0 0 r0];
 data_points = zeros(179,3);
 subplot(2,1,2)
 
+shat = sm
 for i=1:length(data(:,1))
-    [shat, xhat] = nls(sm, sig(data(i,:)), 'thmask', zeros(sm.nn(4), 1));
-    sm.x0 = [shat.x0(1:2)' shat.x0(3) + 0.5];
+    [shat, xhat] = nls(shat, sig(data(i,:) - bias), 'thmask', zeros(sm.nn(4), 1));
+    shat.x0 = [shat.x0(1:2)' shat.x0(3) + 0.5];
     data_points(i,:) = xhat.sol;
-    plot(shat, 'conf', 90);
 end
+plot(data_points(:,1),data_points(:,2))
 hold on
 plot(gt(:,2),gt(:,3))
 title('TDOA with bias state')
 hold on
 %%
 
-%% 7.6
+%% 7.6 EKF artificial measurements CV
 figure()
 direct_measurement = @(t,x,u,th) [x(1,:); x(2,:)];
 sm = sensormod(direct_measurement, [2 0 2 0]);
 
 m = exmotion('cv2d');
 m = m.addsensor(sm);
-m.pe=eye(2) * 0.1;
+%Q = diag([1 1 2 2 10 10])
+Q = diag([1 1 2 2]) * 0.1;
+tmp_cov = m.pv.cov;
+m.pv = ndist(zeros(4,1), tmp_cov * Q * tmp_cov');
+%m.pv = m.pv * 0.5;
+m.pe=eye(2) * 0.003;
+m.px0 = blkdiag(eye(2)*1000,eye(2)*1000);
 xhat1 = ekf(m, sig(data_points(:, 1:2))); % Time - varying
 subplot(2,2,1)
 xplot2(xhat1, [1 2]);
 hold on
 plot(gt(:,2),gt(:,3))
 title('EKF artificial measurements CV')
-
+%% EKF artificial measurements CA
 sm = sensormod(direct_measurement, [2 0 2 0]);
 m = exmotion('ca2d');
 m = m.addsensor(sm);
-m.pe=eye(2) * 0.1;
-m.pv = m.pv * 0.1;
+m.px0 = blkdiag(eye(2)*1000,eye(2)*1000,eye(2)*1000);
+m.pe=eye(2) * 0.003;
+Q = diag([1 1 2 2 5 5]) * 0.1;
+tmp_cov = m.pv.cov;
+m.pv = ndist(zeros(6,1), tmp_cov * Q * tmp_cov');
+%m.pv = m.pv * 0.5;
 xhat1 = ekf(m, sig(data_points(:, 1:2))); % Time - varying
-subplot(2,2,2)
+subplot(2,2,2) 
+%clf('reset')
 xplot2(xhat1, [1 2]);
 hold on
 plot(gt(:,2),gt(:,3))
@@ -199,12 +206,16 @@ title('EKF artificial measurements CA')
 TDOA_measurements = (data(:, 1) - data(:, 2:4));
 sm = sensormod(@model2, [2 0 3 8]);
 
-R1 = diag(err_std(1));
-R = diag(err_tdoa_std(2:4));
+R1 = err_std(1);
+R = diag(err_std(2:4));
 mm = exmotion('cv2d', 0.5);
 mms = addsensor(mm, sm);
-mms.pe = ndist(zeros(3,1), R); % maybe kaos
-mms.pv = mms.pv * 0.1;
+mms.pe = ndist(zeros(3,1), R + R1); % maybe kaos
+
+Q = diag([1 1 2 2]) * 0.1;
+tmp_cov = mms.pv.cov;
+mms.pv = ndist(zeros(4,1), tmp_cov * Q * tmp_cov');
+
 mms.th = th * 0.001;
 xhat1 = ekf(mms, sig(TDOA_measurements)); % Time - varying
 subplot(2,2,3)
@@ -218,11 +229,17 @@ title('EKF pairwise difference measure CV')
 TDOA_measurements = (data(:, 1) - data(:, 2:4));
 sm = sensormod(@model2, [2 0 3 8]);
 
-R = diag(err_tdoa_std(2:4));
+R1 = err_std(1);
+R = diag(err_std(2:4));
 mm = exmotion('ca2d', 0.5);
 mms = addsensor(mm, sm);
-mms.pe = ndist(zeros(3,1), R(1:3,1:3));
-mms.pv = mms.pv * 0.1;
+mms.pe = ndist(zeros(3,1), R + R1);
+
+Q = diag([1 1 2 2 5 5]) * 0.1;
+tmp_cov = mms.pv.cov;
+mms.pv = ndist(zeros(6,1), tmp_cov * Q * tmp_cov');
+
+%mms.pv = mms.pv * 0.1;
 mms.th = th * 0.001;
 xhat1 = ekf(mms, sig(TDOA_measurements));
 subplot(2,2,4)
@@ -243,7 +260,7 @@ for i=1:9
     th_bad = th + sens_std.*randn(8,1)';
     TDOA_measurements = (data(:, 1) - data(:, 2:4));
     sm = sensormod(@model2, [2 0 3 8]);
-    R1 = eye(3) * err_std(1);
+    R1 = err_std(1);
     R = diag(err_std(2:4));
     mm = exmotion('cv2d', 0.5);
     mms = addsensor(mm, sm);
